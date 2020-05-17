@@ -10,31 +10,20 @@
 #include "switches.h"
 #include "leds.h"
 
-void print_switches() {
-	lcd_set_cursor(0, 1);
-	
-	if (switch_get(P_SW_UP)) {
-		printf("\n     UP     \n"  );
-	} else if (switch_get(P_SW_CR)) {
-		printf("\n     CENTER     \n"  );
-	} else if (switch_get(P_SW_DN)) {
-		printf("\n     DOWN     \n"  );
-	} else if (switch_get(P_SW_LT)) {
-		printf("\n     LEFT     \n"  );
-	} else if (switch_get(P_SW_RT)) {
-		printf("\n     RIGHT     \n"  );
-	} else {
-		printf("\n     NOTHING     \n"  );
-	}
-}
 
-void light_leds() {
-	leds_set(switch_get(P_SW),
-	         switch_get(P_SW_CR),
-	         switch_get(P_SW_DN));
-}
-
+int count = 0;
 int signal = 0; 
+
+void button_press_isr(int sources) {
+	gpio_set(P_DBG_ISR, 1);
+if ((sources << GET_PIN_INDEX(P_SW)) & (1 << GET_PIN_INDEX(P_SW))) {
+	//count++;
+	leds_set(0,0,0);
+	signal--;
+}
+	gpio_set(P_DBG_ISR, 0);
+}
+
 
 int main(void) {
 	switches_init();
@@ -42,43 +31,40 @@ int main(void) {
 
 	
 	srand(time(NULL));
-	//int sw = -1;
 	int sec=0;
 
 	printf("\n Hello World \n");
 	
+	// Set up debug signals.
+	gpio_set_mode(P_DBG_ISR, Output);
+	gpio_set_mode(P_DBG_MAIN, Output);
+	
+	// Set up on-board switch.
+	gpio_set_mode(P_SW, PullUp);
+	gpio_set_trigger(P_SW, Rising);
+	gpio_set_callback(P_SW, button_press_isr);
+	
+	__enable_irq();
+	
 	while (1) {
-		// print_switches();
-	  // light_leds();
 		
-		//sw = switch_get(PC_13);
-		//printf("sw: %d \n", sw);
+		gpio_toggle(P_DBG_MAIN);
+		//leds_set(count & 1, count & 2, count & 4);
 		
-		//if(sw == 1) {
-		//	leds_set(1,0,0);
-	  // } 
-		
-		//sec = (int) rand() % 9;
-		//sec = sec * 1000;
-		//printf("%d \n", sec);
-		
-		// delay_ms(sec);
-		// leds_set(1, 0, 0);
 		
 		sec = (int) rand() % 9;
-		//sec = 1;
 		delay_ms(sec*1000);
 		
 		leds_set(1,0,0);
 		signal++;
-
-		while(!switch_get(PC_13)) {
-			continue;
-		}
-		signal--;
-		printf(" signal: %d \n", signal);
 		
-		leds_set(0,0,0);
+		//while(!switch_get(P_SW)) {
+		//	continue;
+		//}
+		//signal--;
+		//printf(" signal: %d \n", signal);
+		
+		//leds_set(0,0,0);
 
 	}
 }
