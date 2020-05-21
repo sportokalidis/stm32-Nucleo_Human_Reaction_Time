@@ -10,44 +10,49 @@
 #include "switches.h"
 #include "leds.h"
 
-#define LOOP 5 
-#define MOD 1
 
+#define LOOP 5    // Number of experiments
+#define MOD 1     // The kind of experiment -> 0: The LED off  
+                  //                        -> 1: The LED on 
+									
+// DEF to calculate number of clock cycles									
 #define  ARM_CM_DEMCR      (*(uint32_t *)0xE000EDFC)
 #define  ARM_CM_DWT_CTRL   (*(uint32_t *)0xE0001000)
 #define  ARM_CM_DWT_CYCCNT (*(uint32_t *)0xE0001004)
 
+// Enable and Initialize counter that counts CPU clock cycles 
 void init_timer(){
-	if (ARM_CM_DWT_CTRL != 0) {        // See if DWT is available
+	if (ARM_CM_DWT_CTRL != 0) {      // See if DWT is available
+		ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
 
-			ARM_CM_DEMCR      |= 1 << 24;  // Set bit 24
+		ARM_CM_DWT_CYCCNT = 0;
 
-			ARM_CM_DWT_CYCCNT  = 0;
-
-			ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
+		ARM_CM_DWT_CTRL   |= 1 << 0;   // Set bit 0
 	}
 }
 
-int count = 0;
-int signal = 0; 
 
-uint32_t start;
-uint32_t end;
-uint32_t total_cycles;
-uint32_t total_time;
+int count = 0;           // Count the experiments
+int signal = 0;          // 0: the led is off , 1: the LED is on
 
-uint32_t sum = 0; 
+uint32_t start;          // Number of CPU clock cycles when the LED on 
+uint32_t end;            // Number of CPU clock cycles when the LED off
+uint32_t total_cycles;   // Total number of CPU clock cycles [ end - start]
+uint32_t total_time;     // Human reaction time: total_cycle / CPU_freq [in ms]
 
+uint32_t sum = 0;        // sum of all total_times   
+
+// interrupt function
 void button_press_isr(int sources) {
-	end  = ARM_CM_DWT_CYCCNT;
-	total_cycles = end - start;
-	// """ Stop measure clock cycles
-	printf(" total_cycles: %zu\n", total_cycles);
+	end  = ARM_CM_DWT_CYCCNT;             // Take the cpu cycles when an interrupt occur   
+	total_cycles = end - start;           // Calculate the total num of cycles
 	
-	total_time = total_cycles / (SystemCoreClock * 1e-3);
+	printf(" total_cycles: %zu\n", total_cycles); 
+	
+	total_time = total_cycles / (SystemCoreClock * 1e-3); // Calculate the total time in ms 
 	printf(" total_time: %zu\n\n", total_time);
 	
-	sum += total_time;
+	sum += total_time;                    // Sum the total time to find the average at the end 
 	
 	gpio_set(P_DBG_ISR, 1);
 	if ((sources << GET_PIN_INDEX(P_SW)) & (1 << GET_PIN_INDEX(P_SW))) {
@@ -60,18 +65,16 @@ void button_press_isr(int sources) {
 
 
 int main(void) {
-	switches_init();
+	switches_init();    
 	leds_init();
-	leds_set(MOD,0,0);
+	leds_set(MOD,0,0);         // Init the LED MOD==0 -> off,   MOD==1 -> on
 	
-	init_timer();
+	init_timer();              // Initialize counter that counts CPU clock cycles
 
-	float average_time = 0;
+	float average_time = 0;    // The average time of all experiments that take place
 	
-	srand(time(NULL));
-	int sec=0;
-
-	printf("\n Hello World \n");
+	srand(time(NULL));            
+	int sec=0;                 // delay sec  
 	
 	// Set up debug signals.
 	gpio_set_mode(P_DBG_ISR, Output);
@@ -81,7 +84,8 @@ int main(void) {
 	gpio_set_mode(P_SW, PullUp);
 	gpio_set_trigger(P_SW, Rising);
 	gpio_set_callback(P_SW, button_press_isr);
-	
+
+  // Disable the interrupts
 	__disable_irq();
 	
 	while (1) {
@@ -90,22 +94,22 @@ int main(void) {
 		//leds_set(count & 1, count & 2, count & 4);
 		
 		if(signal == 0 && count < LOOP) {
-			__disable_irq();
+			__disable_irq(); // Disable the interrupts
 			
-			sec = (int) rand() % 9;
+			// delay for a random time between 0 and 8 secs
+			sec = (int) rand() % 9;   
 			delay_ms(sec*1000);
-		
-			// int result = (MOD+1)%2;
-			leds_set((MOD+1)%2,0,0);
+			
+			leds_set((MOD+1)%2,0,0); // the LED on or off 
 			
 			// """  start to measure clocks here """
-			start = ARM_CM_DWT_CYCCNT; 
+			start = ARM_CM_DWT_CYCCNT;    // take the num of clock cycles
+			signal = 1;    // signal == 1 until the an interrupt occur
 			
-			signal = 1;
-			
-			__enable_irq();
+			__enable_irq(); // enable the interrupts
 		}
 		
+		// calculate the average time
 		if(count == LOOP) {
 			average_time = ((float) sum)/ LOOP;
 			printf(" average time = %f\n", average_time);
