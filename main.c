@@ -47,18 +47,18 @@ void button_press_isr(int sources) {
 	gpio_set(P_DBG_ISR, 1);
 
 	if ((sources << GET_PIN_INDEX(P_SW)) & (1 << GET_PIN_INDEX(P_SW))) {
-		end  = ARM_CM_DWT_CYCCNT;             // Take the cpu cycles when an interrupt occur
+		end  = ARM_CM_DWT_CYCCNT;      // Take the cpu cycles when an interrupt occur
 
-		total_cycles = end - start;           // Calculate the total num of cycles
+		total_cycles = end - start;    // Calculate the total num of cycles
 		printf(" total_cycles: %zu\n", total_cycles);
 
 		total_time = total_cycles / (SystemCoreClock * 1e-3); // Calculate the total time in ms
 		printf(" total_time: %zu\n\n", total_time);
 
-		sum += total_time;        // Sum the total time to find the average at the end
+		sum += total_time;             // Sum the total time to find the average at the end
 
-		count++;                  // increase the counter of experiments
-		leds_set(MOD,0,0);        // toggle the led
+		count++;                       // increase the counter of experiments
+		leds_set(MOD,0,0);             // toggle the led
 		signal = 0;
 	}
 	gpio_set(P_DBG_ISR, 0);
@@ -114,7 +114,7 @@ int main(void) {
 		// calculate the average time
 		if(count == LOOP) {
 			average_time = ((float) sum)/ LOOP;
-			printf(" average time = %f\n", average_time);
+			printf("** average time = %f **\n\n", average_time);
 
 			sum = 0;
 			count=0;
