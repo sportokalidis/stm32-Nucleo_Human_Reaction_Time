@@ -90,10 +90,7 @@ int main(void) {
 
 
 	while (1) {
-
 		gpio_toggle(P_DBG_MAIN);
-		//leds_set(count & 1, count & 2, count & 4);
-
 
 		if(signal == 0 && count < LOOP) {
 
