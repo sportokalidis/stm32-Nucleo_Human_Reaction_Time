@@ -45,21 +45,23 @@ uint32_t sum = 0;        // sum of all total_times
 // Interrupt function
 void button_press_isr(int sources) {
 	gpio_set(P_DBG_ISR, 1);
+	
+	if(signal == 1){ // check if the LED has been toggled 
+		if ((sources << GET_PIN_INDEX(P_SW)) & (1 << GET_PIN_INDEX(P_SW))) {
+			end  = ARM_CM_DWT_CYCCNT;      // Take the cpu cycles when an interrupt occur
 
-	if ((sources << GET_PIN_INDEX(P_SW)) & (1 << GET_PIN_INDEX(P_SW))) {
-		end  = ARM_CM_DWT_CYCCNT;      // Take the cpu cycles when an interrupt occur
+			total_cycles = end - start;    // Calculate the total num of cycles
+			printf(" total_cycles: %zu\n", total_cycles);
 
-		total_cycles = end - start;    // Calculate the total num of cycles
-		printf(" total_cycles: %zu\n", total_cycles);
+			total_time = total_cycles / (SystemCoreClock * 1e-3); // Calculate the total time in ms
+			printf(" total_time: %zu\n\n", total_time);
 
-		total_time = total_cycles / (SystemCoreClock * 1e-3); // Calculate the total time in ms
-		printf(" total_time: %zu\n\n", total_time);
+			sum += total_time;             // Sum the total time to find the average at the end
 
-		sum += total_time;             // Sum the total time to find the average at the end
-
-		count++;                       // increase the counter of experiments
-		leds_set(MOD,0,0);             // toggle the led
-		signal = 0;
+			count++;                       // increase the counter of experiments
+			leds_set(MOD,0,0);             // toggle the led
+			signal = 0;
+		}
 	}
 	gpio_set(P_DBG_ISR, 0);
 }
@@ -86,8 +88,6 @@ int main(void) {
 	gpio_set_trigger(P_SW, Rising);
 	gpio_set_callback(P_SW, button_press_isr);
 
-  // Disable the interrupts
-	__disable_irq();
 
 	while (1) {
 
@@ -96,7 +96,6 @@ int main(void) {
 
 
 		if(signal == 0 && count < LOOP) {
-			__disable_irq(); // Disable the interrupts
 
 			// delay for a random time between 0 and 8 secs
 			sec = (int) rand() % 9;
@@ -107,8 +106,6 @@ int main(void) {
 			// """  start to measure clocks here """
 			start = ARM_CM_DWT_CYCCNT;    // take the num of clock cycles
 			signal = 1;                   // signal == 1 until the an interrupt occur
-
-			__enable_irq(); // enable the interrupts
 		}
 
 		// calculate the average time
