@@ -1,3 +1,19 @@
+/* 
+ * File: main.c 
+ *
+ *
+ * Description: 2nd Assignment for "Microprocessors and Peripherals" course 
+ *
+ *
+ * Authors: Christoforidis Savvas, schristo@ece.auth.gr
+ *          Portokalidis Stavros , stavport@ece.auth.gr
+ *    
+ *
+ * Date: 24 May 2020
+ *
+ * 
+*/
+
 #include <platform.h>
 #include <gpio.h>
 #include <stdio.h>
